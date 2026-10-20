@@ -406,6 +406,8 @@ select:focus { outline: 2px solid var(--accent-line); outline-offset: 1px; }
 .bar > i { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 60%, var(--gold))); border-radius: 999px; transition: width .4s ease; }
 .mini-stats { margin-top: 7px; font-size: 10.5px; color: var(--faint); }
 .side-note { margin: 10px 0 0; font-size: 10px; color: var(--faint); letter-spacing: .04em; }
+.side-link { display: inline-block; color: var(--accent); text-decoration: none; font-size: 11px; margin-top: 6px; }
+.side-link:hover { text-decoration: underline; }
 
 /* ================= 主区域 ================= */
 .main { grid-column: 2; grid-row: 1; min-width: 0; padding: 18px 32px 90px; }
