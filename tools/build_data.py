@@ -109,8 +109,29 @@ def merge(rec_true, rec_ans):
             "options": options,
             "answer": answer,
             "explanation": clean_text(expl),
+            "material": clean_text(q.material),
+            "materialTitle": clean_text(q.material_title),
             "source": os.path.basename(rec_true["path"]),
         })
+    # 无“根据以下……”标志、但确为共享材料的个别题组
+    extra = {
+        (2022, "非法学", "基础课"): {
+            "material": "甲（15周岁）深夜闯入临街店铺，意图行窃，被留下理货的店主（系聋哑人）发现。",
+            "title": "根据以下案情，回答第9、10、11小题。",
+            "nums": (9, 10, 11),
+        }
+    }
+    info = extra.get((rec_true["year"], rec_true["degree"], rec_true["paper"]))
+    if info:
+        for q in out:
+            if q["number"] in info["nums"]:
+                q["material"] = info["material"]
+                q["materialTitle"] = info["title"]
+            # 清掉此前被并入上一题选项的材料尾巴
+            for k, v in list(q["options"].items()):
+                if info["material"] in v:
+                    q["options"][k] = v.split(info["material"])[0].strip()
+
     return out
 
 

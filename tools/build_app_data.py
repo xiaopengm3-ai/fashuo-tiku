@@ -29,11 +29,50 @@ TYPE_LABEL = {
 }
 
 
+OCR_FIX = {
+    "呼吸爽弱": "呼吸微弱",
+    "拔打120": "拨打120",
+    "甲的行应认定": "甲的行为应认定",
+    "违法所得了200万元": "违法获得200万元",
+    "悖悖离开": "悻悻离开",
+}
+
+
+def fix_ocr(t: str) -> str:
+    for a, b in OCR_FIX.items():
+        t = t.replace(a, b)
+    return t
+
+
 def tidy(t: str) -> str:
-    t = (t or "").strip()
+    t = fix_ocr((t or "").strip())
     t = re.sub(r"[ \t]+", "", t)
     t = re.sub(r"\n{3,}", "\n\n", t)
+    t = re.sub(r"\d{1,3}\s*/\s*\d{1,3}$", "", t).strip()
     return t
+
+
+def tidy_material(t: str) -> str:
+    t = (t or "").replace("\r", "")
+    lines = []
+    for line in t.splitlines():
+        line = re.sub(r"[ \t]+", "", line).strip()
+        if not line:
+            continue
+        if re.fullmatch(r"\d{1,3}\s*/\s*\d{1,3}", line):
+            continue
+        if any(k in line for k in ("添加秋北", "公众号", "小红书", "领取更多", "备考群")):
+            continue
+        lines.append(line)
+    out = ""
+    for line in lines:
+        if not out:
+            out = line
+        elif re.match(r"^([（(]\d|材料[一二三四五]|[一二三四五六七八九十]+、)", line):
+            out += "\n" + line
+        else:
+            out += line
+    return fix_ocr(out.strip())
 
 
 def tidy_expl(t: str) -> str:
@@ -94,6 +133,8 @@ def main():
             "topicName": tinfo["name"] if tinfo else "未分类",
             "groupName": tinfo["group"] if tinfo else "其他",
             "stem": stem,
+            "material": tidy_material(q.get("material") or ""),
+            "materialTitle": tidy(q.get("materialTitle") or ""),
             "options": {k: opts.get(k, "") for k in "ABCD"} if objective else {},
             "answer": ans,
             "explanation": tidy_expl(q.get("explanation") or ""),

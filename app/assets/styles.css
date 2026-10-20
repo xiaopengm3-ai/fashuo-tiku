@@ -652,6 +652,25 @@ select:focus { outline: 2px solid var(--accent-line); outline-offset: 1px; }
 .chip.type { color: var(--gold); border-color: color-mix(in srgb, var(--gold) 30%, transparent); background: color-mix(in srgb, var(--gold) 8%, var(--surface)); }
 .q-no { margin-left: auto; font-family: var(--serif); font-size: 12px; color: var(--faint); letter-spacing: .08em; }
 
+.q-material {
+  margin: 0 0 18px;
+  padding: 14px 17px;
+  background: var(--surface-2);
+  border-left: 3px solid var(--gold);
+  border-radius: 10px;
+  font-family: var(--serif);
+  font-size: 14.5px;
+  line-height: 1.9;
+  color: var(--ink-2);
+  white-space: pre-wrap;
+}
+.q-material-head {
+  font-family: var(--sans);
+  font-size: 10px;
+  letter-spacing: .16em;
+  color: var(--gold);
+  margin-bottom: 6px;
+}
 .q-stem {
   font-family: var(--serif);
   font-size: 20px;

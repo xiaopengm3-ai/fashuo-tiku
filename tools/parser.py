@@ -29,6 +29,10 @@ SECTION_RE = re.compile(
     r"(单项选择题|单选题|多项选择题|多选题|简答题|辨析题|法条分析题|案例分析题|材料分析题|分析论述题|论述题|分析题)"
 )
 Q_RE = re.compile(r"^\s*(\d{1,3})\s*[.．、,，]\s*")
+SHARED_RE = re.compile(
+    r"根据(?:以下|下列)(?:案情|材料|案例|情况)[，,;；]?\s*回答\s*第?\s*"
+    r"(\d{1,3}(?:\s*[、,，和及\-~～]\s*\d{1,3}){0,4})\s*(?:小题|题)"
+)
 Q_SPACE_RE = re.compile(r"^\s*(\d{1,3})\s+(?=[\u4e00-\u9fff\u201c\u2018《])")
 
 
@@ -66,6 +70,8 @@ class Question:
     options: dict = field(default_factory=dict)
     raw: str = ""
     page: int = 0
+    material: str = ""
+    material_title: str = ""
 
 
 NUM_LINE_FIX = [
@@ -176,6 +182,34 @@ def finalize_options(opts: dict[str, str]) -> dict[str, str]:
     return out
 
 
+def extract_shared_blocks(seq):
+    """提取“根据以下案情，回答第 X、Y 小题”型共享材料块。"""
+    blocks = []
+    for i, (pno, ln) in enumerate(seq):
+        t = ln.text.strip()
+        if not t.startswith(("根据以下", "根据下列")):
+            continue
+        m = SHARED_RE.search(t)
+        if not m and i + 1 < len(seq):
+            m = SHARED_RE.search(t + " " + seq[i + 1][1].text)
+        if not m:
+            continue
+        nums = [int(x) for x in re.findall(r"\d+", m.group(1))]
+        end = None
+        for j in range(i + 1, min(i + 60, len(seq))):
+            if match_q(seq[j][1].text) in nums:
+                end = j
+                break
+        if end is None:
+            continue
+        lines = [seq[k][1].text for k in range(i + 1, end)]
+        material = "\n".join(x for x in lines if x.strip()).strip()
+        if len(material) < 8:
+            continue
+        blocks.append({"start": i, "end": end, "nums": nums, "title": t, "material": material})
+    return blocks
+
+
 def parse_true_pages(pages: list[list[TextLine]]) -> list[Question]:
     # 先整理为 (page, line) 序列
     seq = []
@@ -184,6 +218,14 @@ def parse_true_pages(pages: list[list[TextLine]]) -> list[Question]:
             if is_header(ln.text):
                 continue
             seq.append((pno, ln))
+
+    shared_blocks = extract_shared_blocks(seq)
+    shared_idx = set()
+    material_by_num = {}
+    for b in shared_blocks:
+        shared_idx.update(range(b["start"], b["end"]))
+        for n in b["nums"]:
+            material_by_num[n] = b
 
     # 找到题号链
     starts = []
@@ -236,6 +278,8 @@ def parse_true_pages(pages: list[list[TextLine]]) -> list[Question]:
         body = [first.text[m.end():].strip()]
         body_lines = [(first, body[0])]
         for j in range(start + 1, end):
+            if j in shared_idx:
+                break
             t = seq[j][1].text
             if SECTION_RE.match(t):
                 break
@@ -287,10 +331,13 @@ def parse_true_pages(pages: list[list[TextLine]]) -> list[Question]:
         stem = re.sub(r"([。？！])\1+", r"\1", stem)
         if not stem.endswith(("？", "?", "。", "）", ")")):
             stem = stem.rstrip("，,、;；") + "。"
+        mb = material_by_num.get(num)
         questions.append(Question(
             number=num, qtype=sec, stem=stem,
             options=finalize_options(opts) if sec in ("single", "multiple") else {},
             page=pno,
+            material=mb["material"] if mb else "",
+            material_title=mb["title"] if mb else "",
         ))
     questions.sort(key=lambda q: q.number)
     return questions

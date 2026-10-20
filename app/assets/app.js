@@ -186,7 +186,7 @@
     if (f.q) {
       const needle = f.q.toLowerCase();
       list = list.filter((q) => {
-        const hay = q.stem + " " + Object.values(q.options || {}).join(" ") + " " + (q.topicName || "");
+        const hay = q.stem + " " + (q.material || "") + " " + Object.values(q.options || {}).join(" ") + " " + (q.topicName || "");
         return hay.toLowerCase().includes(needle);
       });
     }
@@ -552,8 +552,17 @@
       <span class="chip type">${esc(q.typeLabel)}</span>
       <span class="chip subj" data-subject="${q.subject}">${esc(q.subjectName || subjectName(q.subject))}</span>
       <span class="chip topic">${esc(q.topicName || "未分类")}</span>
+      ${q.material ? '<span class="chip type">材料题</span>' : ''}
       <span class="q-no">第 ${q.number} 题</span>`;
 
+    const matEl = $("#qMaterial");
+    if (q.material) {
+      matEl.hidden = false;
+      matEl.innerHTML = `<div class="q-material-head">材料</div>${esc(q.material)}`;
+    } else {
+      matEl.hidden = true;
+      matEl.innerHTML = "";
+    }
     $("#qStem").textContent = q.stem;
 
     const p = progress[q.id];

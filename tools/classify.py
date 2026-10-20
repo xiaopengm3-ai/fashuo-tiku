@@ -357,11 +357,11 @@ def main():
         items.sort(key=lambda x: x["number"])
         scores = {}
         for q in items:
-            text = clean(q["stem"] + "".join(q["options"].values()) + q["explanation"])
+            text = clean(q["stem"] + q.get("material", "") + "".join(q["options"].values()) + q["explanation"])
             scores[q["number"]] = strict_subject_scores(text)
         assign = segment_paper(items, scores, key[2])
         for q in items:
-            text = clean(q["stem"] + "".join(q["options"].values()) + q["explanation"])
+            text = clean(q["stem"] + q.get("material", "") + "".join(q["options"].values()) + q["explanation"])
             fixed = fixed_subject(q["year"], q["degree"], q["paper"], q["number"])
             sid = fixed or assign[q["number"]]
             if fixed:
