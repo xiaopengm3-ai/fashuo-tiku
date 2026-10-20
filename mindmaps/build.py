@@ -1,0 +1,549 @@
+# -*- coding: utf-8 -*-
+"""生成《背诵一本通·法制史》下编思维导图（HTML / Markdown / OPML）。"""
+import json
+import os
+import re
+from html import escape
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT = os.path.join(ROOT, "mindmaps")
+os.makedirs(OUT, exist_ok=True)
+
+
+def N(title, note="", page="", tag="", children=None):
+    return {"title": title, "note": note, "page": page, "tag": tag, "children": children or []}
+
+
+DATA = N(
+    "下编 中国近现代法制",
+    "清末修律 → 南京临时 → 北洋 → 南京国民政府 → 革命根据地；以立法、宪法、刑事、民商、司法五线展开。",
+    "p.149—184",
+    "总览",
+    [
+        N("第一章 立法概况", "近代立法体系如何建立：修律、六法全书与各政权立法。", "p.149—154", "章", [
+            N("清末修律", "收回领事裁判权、变法自强；沈家本、伍廷芳主持。", "p.149", "制度", [
+                N("修律动因", "收回领事裁判权、变法自强；1901《江楚会奏变法三折》。", "p.149", "背景"),
+                N("指导思想", "“中外通行，有裨治理”；“不戾乎中国数千年相传之礼教民情”。", "p.149", "原则"),
+                N("修律机关", "修订法律馆（1904 开始办公）；修律大臣沈家本、伍廷芳。", "p.149", "机构"),
+                N("主要特点", "借西法形式、固守君主专制与伦理纲常；诸法合体解体；保皇实质。", "p.150", "特点"),
+                N("历史意义", "中华法系解体；法律近代化基础；传播西法；推动资本主义与法学教育。", "p.150", "意义"),
+            ]),
+            N("南京临时政府法令", "无系统立法；以革命法令保障民权、发展经济、改革社会。", "p.150", "制度", [
+                N("保障民权", "《保护人民财产令》；禁止买卖人口、废除贱民、保护华侨。", "p.150", "制度"),
+                N("发展经济", "兴办实业、奖励农垦、鼓励华侨投资；商业注册、商业银行则例。", "p.150", "制度"),
+                N("文化教育", "奖励女学、男女同校、废止读经、禁用前清教科书。", "p.150", "制度"),
+                N("社会改革", "禁赌、剪辫、劝禁缠足、改革称呼旧制。", "p.150", "制度"),
+            ]),
+            N("北洋政府立法", "“隆礼”与“重刑”并重；大量单行法规与判例解释例。", "p.151", "制度", [
+                N("立法指导思想", "倡导伦理纲常、尊孔读经；隆礼重刑，严刑峻法。", "p.151", "原则"),
+                N("立法活动特点", "采西方原则；沿用删改清末法律；大量单行法规；判例解释例为重要渊源。", "p.151", "特点"),
+            ]),
+            N("南京国民政府立法", "三民主义、权能分治、五权宪法；六法全书体系。", "p.152—154", "制度", [
+                N("立法指导思想", "三民主义为核心；权能分治（政权/治权）；五权宪法；军政—训政—宪政。", "p.152", "原则"),
+                N("法律制度特点", "以孙中山遗教为根本；特别法多于普通法且效力高；六法全书；不成文法重要。", "p.153", "特点"),
+                N("立法阶段", "1927—1936 形成；1937—1945 发展（两面性）；1946—1949 完善与崩溃。", "p.153", "背景"),
+                N("六法全书", "宪法、民法、民诉、刑法、刑诉、行政法；基本法典+相关法规+判例解释例。", "p.153—154", "法典"),
+            ]),
+        ]),
+        N("第二章 宪法制度", "从清末预备立宪到 1947 年宪法，以及革命根据地宪法文件。", "p.155—164", "章", [
+            N("清末预备立宪", "1905 仿行宪政 → 1908 钦定宪法大纲 → 1911 十九信条。", "p.155—156", "制度", [
+                N("预备立宪时间线", "1905 五大臣考察；1906 宣示预备立宪；1907 筹设资政院/咨议局；1908 九年清单；1909 咨议局；1910 资政院；1911 十九信条。", "p.155", "背景"),
+                N("《钦定宪法大纲》", "1908；中国第一个宪法性文件；宪政编查馆；君上大权+臣民权利义务。", "p.155—156", "法典"),
+                N("《十九信条》", "1911；资政院；君主立宪；缩皇权、扩国会；未提人民权利。", "p.155—156", "法典"),
+                N("资政院与咨议局", "资政院中央咨询机关（1910）；咨议局地方咨询机关（1909）；形式议会、实为咨询。", "p.156", "机构"),
+            ]),
+            N("南京临时政府宪法", "《临时政府组织大纲》奠基，《临时约法》确立共和。", "p.156—158", "制度", [
+                N("《临时政府组织大纲》", "1911.12；各省都督府代表会议；总统制；参议院；临时中央审判所；未列人民权利。", "p.156", "法典"),
+                N("《临时约法》内容", "1912.3；7章56条；民主共和、三权分立、责任内阁、人民权利、私有财产。", "p.157", "法典"),
+                N("《临时约法》特点", "改总统制为责任内阁制；扩大参议院权力；特别修改程序（防袁）。", "p.158", "特点"),
+                N("《临时约法》意义", "第一部资产阶级共和国性质宪法文件；否定君主专制；因人立法局限。", "p.158", "意义"),
+            ]),
+            N("北洋政府宪法", "天坛宪草 → 袁记约法 → 贿选宪法，共和形式与军阀专制交织。", "p.159—160", "制度", [
+                N("天坛宪草", "1913；第一部宪法草案；责任内阁；国会权力+国会委员会；总统任期5年；审计院。", "p.159", "法典"),
+                N("袁记约法", "1914；总统制；废国会设参政院；总统10年可连任/世袭；权利受限。", "p.159", "法典"),
+                N("贿选宪法", "1923；第一部正式宪法；条文完备、形式民主；地方自治实为军阀势力范围。", "p.160", "法典"),
+            ]),
+            N("南京国民政府宪法", "训政纲领 → 训政时期约法 → 五五宪草 → 1947 年宪法。", "p.160—161", "制度", [
+                N("《训政纲领》", "1928；国民党一党专政、以党训政；中央政治会议领导政府。", "p.160", "法典"),
+                N("《训政时期约法》", "1931；党治；五院制；权利限制；发展官僚资本。", "p.160", "法典"),
+                N("《五五宪草》", "1936；未议决；1947 年宪法蓝本；总统制、国民大会、五院制衡。", "p.161", "法典"),
+                N("1947 年《中华民国宪法》", "三民主义/五权；国民大会；总统制受制约；中央地方分权；1948 年《动员戡乱时期临时条款》。", "p.161", "法典"),
+            ]),
+            N("革命根据地宪法", "工农民主、抗日民主、人民民主三种政权形态的宪法文件。", "p.162—164", "制度", [
+                N("《中华苏维埃共和国宪法大纲》", "1931；工农民主专政；工农兵代表大会；权利；外交；意义与局限。", "p.162", "法典"),
+                N("《陕甘宁边区施政纲领》", "1941；抗日/团结/民主；参议会+三三制；司法廉洁；经济文化。", "p.163", "法典"),
+                N("《陕甘宁边区宪法原则》", "1946；人民代表会议制；民主权利/民族区域自治；司法原则；经济文化。", "p.163", "法典"),
+            ]),
+        ]),
+        N("第三章 刑事法律制度", "从传统刑律向近代刑法典转型，及革命根据地刑事制度。", "p.165—169", "章", [
+            N("清末刑事立法", "《大清现行刑律》过渡，《大清新刑律》近代化，礼法之争收场。", "p.165—166", "制度", [
+                N("《大清现行刑律》", "1910.5；过渡；保留名例/诸法合体/十恶/律例合编；删酷刑缘坐、区分民刑、新罪名、五刑。", "p.165", "法典"),
+                N("《大清新刑律》", "1911.1；第一部近代专门刑法典；总则/分则+《暂行章程》；取消十恶；主刑5/从刑2；西原则。", "p.165—166", "法典"),
+                N("礼法之争", "礼教派张之洞、劳乃宣 vs 法理派沈家本、杨度；焦点5；结局《暂行章程》。", "p.166", "对比"),
+            ]),
+            N("北洋政府刑事", "沿用清末新刑律，增单行法规，刑罚趋酷。", "p.167", "制度", [
+                N("《暂行新刑律》", "以《大清新刑律》为基础；删帝制/皇室特权；改“帝国”为“中华民国”、“臣民”为“国民”。", "p.167", "法典"),
+                N("单行刑事法规", "《戒严法》《治安警察条例》《惩治盗匪法》《易笞条例》等；恢复发遣、笞刑。", "p.167", "法典"),
+            ]),
+            N("南京国民政府刑事", "1935 年新刑法采社会防卫主义，特别法重刑。", "p.167—168", "制度", [
+                N("1935 年《中华民国刑法》", "主观主义/社会防卫；保安处分；保留尊亲属加重、同居相隐、亲族盗免、纳妾；从新从轻。", "p.167", "法典"),
+                N("刑事特别法", "数量多、效力高、重刑；镇压共产党与进步人士。", "p.168", "特点"),
+            ]),
+            N("革命根据地刑事", "罪名、刑种、定罪量刑原则随政权性质变化。", "p.168—169", "制度", [
+                N("罪名", "抗日：汉奸、破坏坚壁财物、贪污；人民民主：战犯、地主恶霸、土匪、反动党团、会道门。", "p.168", "制度"),
+                N("刑种", "抗日主刑死刑/有期/劳役，从刑罚金/褫夺公权/没收；人民民主加无期、管制。", "p.168—169", "制度"),
+                N("定罪量刑原则", "工农民主5项；抗日3项；人民民主“首恶必办、胁从不问、立功受奖”。", "p.169", "原则"),
+            ]),
+        ]),
+        N("第四章 民商事法律制度", "民法典从草案到正式颁行，以及根据地土地、劳动、婚姻立法。", "p.170—177", "章", [
+            N("清末民商立法", "《大清民律草案》与商事立法，民商分立。", "p.170—171", "制度", [
+                N("《大清民律草案》", "1911.10；5编；民商分立；前3编松冈义正（日德瑞），后2编礼学馆传统；第一部民法典草案。", "p.170", "法典"),
+                N("商事立法", "1903—1907/1907—1911；《钦定大清商律》《公司注册试办章程》《商标注册试办章程》《破产律》等；特点3。", "p.170—171", "法典"),
+            ]),
+            N("北洋政府民商", "“现行律民事有效部分”为第一顺位法源，民律第二次草案未完成。", "p.171—172", "制度", [
+                N("民事法律渊源", "现行律民事有效部分（近20年）；单行法令；判例解释例；习惯法/条理。", "p.171", "制度"),
+                N("《民律第二次草案》", "1926；5编1522条；采固有法/判例；社会本位；未正式立法。", "p.172", "法典"),
+                N("商事法规", "《矿业条例》《森林法》《公司条例》《交易所法》《破产法草案》《票据法草案》等；多未完成立法。", "p.172", "法典"),
+            ]),
+            N("南京国民政府民商", "《中华民国民法》正式颁行，民商合一。", "p.173—174", "制度", [
+                N("《中华民国民法》", "1929—1930；5编；民商合一；最新学理/婚姻家庭固有法/习惯法理/私有财产/社会本位。", "p.173", "法典"),
+                N("单行商事立法", "银行法、交易所法、票据法、公司法、海商法、保险法、破产法。", "p.174", "法典"),
+            ]),
+            N("革命根据地民商", "土地、劳动、婚姻三大立法线，服务革命与根据地建设。", "p.175—177", "制度", [
+                N("土地立法", "井冈山1928/兴国1929/苏维埃土地法1931；抗日减租减息；五四指示1946；《中国土地法大纲》1947。", "p.175—176", "法典"),
+                N("劳动立法", "1931《中华苏维埃共和国劳动法》；抗日保护工人+团结资产阶级；1948 六次劳大。", "p.176—177", "法典"),
+                N("婚姻立法", "1934《中华苏维埃共和国婚姻法》（婚姻自由/婚龄/离婚自由）；抗日婚龄男20女18；人民民主政治条件/干部离婚。", "p.177", "法典"),
+            ]),
+        ]),
+        N("第五章 司法制度", "司法机构与诉讼审判制度的近代转型。", "p.178—184", "章", [
+            N("司法机构", "法院组织、审级、检察、领事裁判权与会审公廨。", "p.178—181", "制度", [
+                N("清末", "1906《大理院审判编制法》（第一部法院编制法、四级三审）；1910《法院编制法》；法部/大理院/审判厅/检察厅（审检合署）。", "p.178—179", "机构"),
+                N("领事裁判权", "1843《中英五口通商章程》《虎门条约》确立；被告主义；四类案件管辖。", "p.178—179", "制度"),
+                N("会审公廨", "1864 上海租界；1868《上海洋泾浜设官会审章程》；领事裁判权制度的延伸。", "p.179", "机构"),
+                N("南京临时政府", "临时中央审判所（未成立）/法院；司法部。", "p.179", "机构"),
+                N("北洋政府", "《暂行法院编制法》；平政院（最早行政诉讼）；四级三审；县知事兼理司法；军法审判。", "p.179—180", "机构"),
+                N("南京国民政府", "1932/1935《法院组织法》；三级三审；司法院/最高法院/行政法院/官吏惩戒委员会/特种刑事法庭。", "p.180", "机构"),
+                N("革命根据地", "工农民主四级二审/审检合一/政治保卫局；抗日两级两审/三级三审；人民民主三级三审/人民法庭。", "p.180—181", "机构"),
+            ]),
+            N("诉讼审判制度", "诉讼法近代化与各政权审判特点。", "p.181—184", "制度", [
+                N("清末诉讼法", "1906《刑事民事诉讼法草案》（陪审/律师，搁置）；1909《大清刑事诉讼律草案》；1909《大清民事诉讼律草案》（第一部法典化民诉草案）；改革5项。", "p.181—182", "法典"),
+                N("南京临时政府", "司法独立；禁止刑讯；禁止体罚；公开审判及陪审；律师制度。", "p.182", "原则"),
+                N("北洋政府", "四级三审；兼理司法法院；军法审判干预司法。", "p.182", "特点"),
+                N("南京国民政府", "刑诉1928/1935；民诉1930—31/1935；特点：严密侦查、自由心证、秘密审判、军法审判、美军特权。", "p.183", "特点"),
+                N("革命根据地", "抗日：马锡五审判方式、人民调解（方式/原则/范围/处理）；人民民主：废除六法全书、确定司法原则。", "p.183—184", "制度"),
+            ]),
+        ]),
+    ]
+)
+
+TAG_COLORS = {
+    "总览": "#1f3b34", "章": "#2f6d5f", "法典": "#8a5a9e", "制度": "#2f6d5f",
+    "原则": "#b4534b", "特点": "#a5763f", "意义": "#4b6b9c", "对比": "#b4534b",
+    "机构": "#4b6b9c", "背景": "#7d7f80",
+}
+CHAPTER_COLORS = ["#2f6d5f", "#8a5a9e", "#b4534b", "#a5763f", "#4b6b9c"]
+
+
+def walk(node, depth=0, chapter=0):
+    node["_depth"] = depth
+    if depth == 1:
+        chapter = node["_chapter"] = (chapter + 1)
+        node["_color"] = CHAPTER_COLORS[(chapter - 1) % len(CHAPTER_COLORS)]
+    elif depth > 1:
+        node["_chapter"] = chapter
+        node["_color"] = node.get("_color") or None
+    for c in node["children"]:
+        walk(c, depth + 1, chapter)
+
+
+walk(DATA)
+
+with open(os.path.join(OUT, "data.json"), "w", encoding="utf-8") as f:
+    json.dump(DATA, f, ensure_ascii=False, indent=1)
+
+# ---------------- Markdown ----------------
+def md_node(node, depth=0):
+    indent = "  " * depth
+    tag = f" `{node['tag']}`" if node["tag"] else ""
+    page = f"（{node['page']}）" if node["page"] else ""
+    line = f"{indent}- **{node['title']}**{tag}{page}"
+    if node["note"]:
+        line += f"：{node['note']}"
+    out = [line]
+    for c in node["children"]:
+        out.append(md_node(c, depth + 1))
+    return "\n".join(out)
+
+
+md = "# 下编 中国近现代法制 · 思维导图\n\n" \
+     "> 依据《背诵一本通·法制史》下编正文整理（p.149—184），已排除书末附录一至四。\n\n" \
+     + md_node(DATA) + "\n"
+with open(os.path.join(OUT, "中国近代法制-思维导图.md"), "w", encoding="utf-8") as f:
+    f.write(md)
+
+# ---------------- OPML ----------------
+def opml_escape(s):
+    return escape(s, quote=True).replace("&#x27;", "&apos;")
+
+
+def opml_node(node, depth=0):
+    attrs = f'text="{opml_escape(node["title"])}"'
+    if node["note"]:
+        attrs += f' _note="{opml_escape(node["note"])}"'
+    if node["page"]:
+        attrs += f' _page="{opml_escape(node["page"])}"'
+    if node["tag"]:
+        attrs += f' _tag="{opml_escape(node["tag"])}"'
+    if node["children"]:
+        inner = "\n".join("  " * (depth + 2) + opml_node(c, depth + 1) for c in node["children"])
+        return f"{'  ' * (depth + 1)}<outline {attrs}>\n{inner}\n{'  ' * (depth + 1)}</outline>"
+    return f"{'  ' * (depth + 1)}<outline {attrs}/>"
+
+
+opml = '<?xml version="1.0" encoding="UTF-8"?>\n<opml version="2.0">\n<head><title>中国近代法制 · 思维导图</title></head>\n<body>\n' \
+       + opml_node(DATA, 0) + "\n</body>\n</opml>\n"
+with open(os.path.join(OUT, "中国近代法制-思维导图.opml"), "w", encoding="utf-8") as f:
+    f.write(opml)
+
+# ---------------- HTML ----------------
+html = r'''<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>中国近代法制 · 思维导图</title>
+<style>
+:root{
+  --bg:#f3efe6; --paper:#fffdf8; --ink:#20242a; --ink2:#4d5156; --muted:#85837d;
+  --line:rgba(38,40,42,.14); --line2:rgba(38,40,42,.24);
+  --accent:#2f6d5f; --gold:#a97b3f;
+  --serif:"Songti SC","STSong","Source Han Serif SC","Noto Serif CJK SC","SimSun",serif;
+  --sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);overflow:hidden}
+body.export{overflow:visible;background:#f3efe6}
+body.export .topbar,body.export .toolbar,body.export .hint{display:none!important}
+.topbar{position:fixed;z-index:30;top:0;left:0;right:0;height:70px;display:flex;align-items:center;gap:18px;padding:0 24px;background:color-mix(in srgb,var(--paper) 88%,transparent);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.title{display:flex;flex-direction:column;gap:2px;min-width:0}
+.title h1{margin:0;font-family:var(--serif);font-size:21px;letter-spacing:.06em;white-space:nowrap}
+.title small{color:var(--muted);font-size:10.5px;letter-spacing:.08em;white-space:nowrap}
+.legend{margin-left:auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:10.5px;color:var(--muted)}
+.legend i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:3px;vertical-align:middle}
+.toolbar{position:fixed;z-index:30;left:0;right:0;bottom:0;height:54px;display:flex;align-items:center;gap:8px;padding:0 20px;background:color-mix(in srgb,var(--paper) 90%,transparent);backdrop-filter:blur(14px);border-top:1px solid var(--line);overflow-x:auto}
+.btn{border:1px solid var(--line);background:var(--paper);color:var(--ink2);border-radius:8px;padding:7px 11px;font-size:12px;cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:var(--line2);color:var(--ink)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.search{margin-left:auto;display:flex;align-items:center;gap:6px}
+.search input{border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:7px 10px;font-size:12px;width:190px;color:var(--ink);outline:none}
+.search input:focus{border-color:var(--accent)}
+.hint{position:fixed;z-index:25;left:20px;bottom:62px;color:var(--muted);font-size:10.5px;background:color-mix(in srgb,var(--paper) 80%,transparent);padding:4px 8px;border-radius:6px}
+#stage{position:fixed;inset:70px 0 54px;overflow:hidden;cursor:grab;background:
+  radial-gradient(circle at 20% 10%,rgba(169,123,63,.07),transparent 40%),
+  radial-gradient(circle at 90% 20%,rgba(47,109,95,.06),transparent 42%),
+  #f3efe6}
+#stage.dragging{cursor:grabbing}
+body.export #stage{position:static;inset:auto;overflow:visible;width:max-content;height:max-content;padding:30px;background:#f3efe6}
+#world{position:absolute;transform-origin:0 0;will-change:transform}
+body.export #world{position:relative;transform:none!important}
+#edges{position:absolute;left:0;top:0;overflow:visible;pointer-events:none}
+.node{position:absolute;border:1px solid var(--line);background:var(--paper);border-radius:10px;padding:10px 12px;box-shadow:0 8px 22px -18px rgba(40,35,25,.5);cursor:pointer;transition:box-shadow .15s,border-color .15s,transform .15s;overflow:hidden}
+.node:hover{box-shadow:0 12px 26px -16px rgba(40,35,25,.55);border-color:var(--line2)}
+.node.d0{background:#1f3b34;color:#fff;border-color:#1f3b34;padding:14px 16px;border-radius:12px;cursor:default}
+.node.d0 .t{font-family:var(--serif);font-size:19px;font-weight:700;letter-spacing:.05em}
+.node.d0 .n{color:rgba(255,255,255,.76);font-size:11px;line-height:1.55;margin-top:5px}
+.node.d1{padding:12px 14px;border-width:1.5px;border-color:var(--c);background:color-mix(in srgb,var(--c) 12%,var(--paper))}
+.node.d1 .t{font-family:var(--serif);font-size:16px;font-weight:700;color:var(--c);letter-spacing:.03em}
+.node.d1 .n{color:var(--ink2);font-size:10.5px;line-height:1.5;margin-top:3px}
+.node.d2{border-left:3px solid var(--c)}
+.node.d2 .t{font-size:13px;font-weight:700;color:var(--ink)}
+.node.d2 .n{color:var(--ink2);font-size:10.5px;line-height:1.55;margin-top:3px}
+.node.d3{border-left:3px solid var(--c);background:#fffefa}
+.node.d3 .t{font-size:12px;font-weight:700;color:var(--ink)}
+.node.d3 .n{color:var(--muted);font-size:10px;line-height:1.55;margin-top:3px}
+.node .tag{position:absolute;right:8px;top:8px;font-size:8.5px;color:var(--tc);border:1px solid color-mix(in srgb,var(--tc) 35%,transparent);background:color-mix(in srgb,var(--tc) 8%,transparent);padding:1px 4px;border-radius:4px;line-height:1.3}
+.node .page{position:absolute;right:8px;bottom:5px;font-size:8.5px;color:var(--muted);background:color-mix(in srgb,var(--paper) 70%,transparent);padding:0 3px;border-radius:3px}
+.node .toggle{position:absolute;right:-7px;top:50%;transform:translateY(-50%);width:14px;height:14px;border-radius:50%;background:var(--paper);border:1px solid var(--c);color:var(--c);font-size:9px;line-height:12px;text-align:center;font-weight:700;box-shadow:0 1px 4px rgba(0,0,0,.12)}
+.node.hit{outline:3px solid #d9a441;outline-offset:3px}
+.node.dim{opacity:.18}
+.node .n{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+body.export .node{cursor:default}
+@media (max-width:760px){
+  .topbar{height:auto;min-height:64px;flex-wrap:wrap;padding:8px 12px;gap:8px}
+  .title h1{font-size:17px;white-space:normal}
+  .title small{white-space:normal}
+  .legend{display:none}
+  #stage{inset:64px 0 54px}
+  .search input{width:120px}
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="title">
+    <h1>中国近代法制 · 思维导图</h1>
+    <small>《背诵一本通·法制史》下编 ｜ 正文整理，已排除附录一至四 ｜ 点击章节展开</small>
+  </div>
+  <div class="legend">
+    <span><i style="background:#2f6d5f"></i>立法</span>
+    <span><i style="background:#8a5a9e"></i>宪法</span>
+    <span><i style="background:#b4534b"></i>刑事</span>
+    <span><i style="background:#a5763f"></i>民商</span>
+    <span><i style="background:#4b6b9c"></i>司法</span>
+  </div>
+</header>
+
+<div id="stage">
+  <div id="world">
+    <svg id="edges"></svg>
+  </div>
+</div>
+
+
+<div class="toolbar">
+  <button class="btn primary" id="expandAll">展开全部</button>
+  <button class="btn" id="collapseDetail">只看框架</button>
+  <button class="btn" id="fit">适应屏幕</button>
+  <button class="btn" id="zoomOut">−</button>
+  <button class="btn" id="zoomIn">＋</button>
+  <button class="btn" id="print">打印 / 导出</button>
+  <a class="btn" href="overview-4k.png" download>4K 总览</a>
+  <a class="btn" href="full-4k.png" download>全图</a>
+  <a class="btn" href="outline.md" download>Markdown</a>
+  <a class="btn" href="outline.opml" download>OPML</a>
+  <div class="search">
+    <input id="search" placeholder="搜索考点、法典…" aria-label="搜索节点">
+  </div>
+</div>
+
+<script>
+const DATA = __DATA__;
+const TAG_COLORS = __TAG_COLORS__;
+const CHAPTER_COLORS = __CHAPTER_COLORS__;
+const stage = document.getElementById('stage');
+const world = document.getElementById('world');
+const edges = document.getElementById('edges');
+let scale = 1, tx = 0, ty = 0;
+let collapsed = new Set();
+let nodes = [], byId = new Map(), seq = 0;
+
+function colorOf(n){
+  if(n._depth===0) return '#1f3b34';
+  return n._color || CHAPTER_COLORS[(n._chapter||1)-1];
+}
+function assign(n, parent){
+  n._id = 'n'+(++seq); n._parent = parent||null; byId.set(n._id,n);
+  n.children.forEach(c=>assign(c,n));
+}
+assign(DATA,null);
+const totalNodes = seq;
+
+function visibleChildren(n){
+  return collapsed.has(n._id) ? [] : n.children;
+}
+function estimateHeight(n){
+  const w = n._depth===0?300:n._depth===1?250:n._depth===2?250:290;
+  const chars = (n.note||'').length + (n.title||'').length;
+  const cpl = n._depth===0?16:n._depth===1?22:24;
+  const lines = Math.max(1, Math.ceil(chars / cpl));
+  let h = 38 + lines*16;
+  if(n._depth===0) h = 108;
+  if(n._depth===1) h = Math.max(64, 44+lines*15);
+  if(n._depth>=2) h = Math.max(58, 36+lines*15);
+  return Math.min(h, n._depth>=2?132:110);
+}
+function widthOf(n){ return n._depth===0?300:n._depth===1?250:n._depth===2?250:290; }
+
+let cursor = 0;
+let maxRight = 0;
+function layout(n, depth){
+  n._x = 40 + depth*340;
+  n._w = widthOf(n);
+  maxRight = Math.max(maxRight, n._x + n._w);
+  n._h = estimateHeight(n);
+  const kids = visibleChildren(n);
+  if(!kids.length){
+    n._y = cursor;
+    cursor += n._h + 14;
+  } else {
+    kids.forEach(c=>layout(c, depth+1));
+    const first = kids[0], last = kids[kids.length-1];
+    n._y = (first._y + last._y + last._h - n._h)/2;
+  }
+}
+
+function render(){
+  cursor = 0; maxRight = 0;
+  layout(DATA,0);
+  const H = Math.max(cursor+40, 300);
+  const W = Math.max(maxRight+40, 420);
+  world.style.width = W+'px';
+  world.style.height = H+'px';
+  edges.setAttribute('width', W);
+  edges.setAttribute('height', H);
+  edges.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  edges.innerHTML = '';
+  world.querySelectorAll('.node').forEach(e=>e.remove());
+  const frag = document.createDocumentFragment();
+  function draw(n){
+    const c = colorOf(n);
+    const d = document.createElement('div');
+    d.className = 'node d'+n._depth;
+    d.dataset.id = n._id;
+    d.style.left = n._x+'px'; d.style.top = n._y+'px';
+    d.style.width = n._w+'px'; d.style.height = n._h+'px';
+    d.style.setProperty('--c', c);
+    d.style.setProperty('--tc', TAG_COLORS[n.tag]||'#7d7f80');
+    if(n._depth===0) d.style.setProperty('--c', '#1f3b34');
+    const tag = n.tag ? `<span class="tag">${n.tag}</span>` : '';
+    const page = n.page ? `<span class="page">${n.page}</span>` : '';
+    const note = n.note ? `<div class="n">${n.note}</div>` : '';
+    const toggle = n.children.length ? `<span class="toggle">${collapsed.has(n._id)?'+':'−'}</span>` : '';
+    d.title = `${n.title}${n.page?'（'+n.page+'）':''}\n${n.note||''}`;
+    d.innerHTML = `${tag}<div class="t">${n.title}</div>${note}${page}${toggle}`;
+    d.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      if(n.children.length){ toggleCollapse(n._id); }
+    });
+    frag.appendChild(d);
+    const kids = visibleChildren(n);
+    kids.forEach(c2=>{
+      const x1 = n._x + n._w, y1 = n._y + n._h/2;
+      const x2 = c2._x, y2 = c2._y + c2._h/2;
+      const mid = (x1+x2)/2;
+      const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+      path.setAttribute('d', `M ${x1} ${y1} C ${mid} ${y1}, ${mid} ${y2}, ${x2} ${y2}`);
+      path.setAttribute('fill','none');
+      path.setAttribute('stroke', c);
+      path.setAttribute('stroke-width', n._depth===0?2.4:(n._depth===1?1.8:1.1));
+      path.setAttribute('opacity', n._depth===0?.55:.38);
+      edges.appendChild(path);
+      draw(c2);
+    });
+  }
+  draw(DATA);
+  world.appendChild(frag);
+}
+
+function toggleCollapse(id){
+  if(collapsed.has(id)) collapsed.delete(id); else collapsed.add(id);
+  render(); fit(); saveState();
+}
+function expandAll(){ collapsed.clear(); render(); fit(); saveState(); }
+function collapseDetail(){
+  collapsed.clear();
+  byId.forEach(n=>{ if(n._depth>=1 && n.children.length) collapsed.add(n._id); });
+  render(); fit(); saveState();
+}
+function fit(){
+  const sw = stage.clientWidth, sh = stage.clientHeight;
+  const w = parseFloat(world.style.width), h = parseFloat(world.style.height);
+  scale = Math.min(1.05, (sw-40)/w);
+  tx = Math.max(20, (sw - w*scale)/2);
+  ty = Math.max(20, (sh - h*scale)/2);
+  applyTransform();
+}
+function applyTransform(){
+  world.style.transform = `translate(${tx}px,${ty}px) scale(${scale})`;
+}
+function zoom(f, cx, cy){
+  const old = scale;
+  scale = Math.max(.18, Math.min(2.6, scale*f));
+  const sx = (cx - tx)/old, sy = (cy - ty)/old;
+  tx = cx - sx*scale; ty = cy - sy*scale;
+  applyTransform();
+}
+stage.addEventListener('wheel', (e)=>{
+  if(document.body.classList.contains('export')) return;
+  e.preventDefault();
+  zoom(e.deltaY<0?1.1:.9, e.clientX, e.clientY);
+}, {passive:false});
+let drag = null;
+stage.addEventListener('pointerdown', (e)=>{
+  if(e.target.closest('.node')) return;
+  drag = {x:e.clientX, y:e.clientY, tx, ty};
+  stage.classList.add('dragging'); stage.setPointerCapture(e.pointerId);
+});
+stage.addEventListener('pointermove', (e)=>{
+  if(!drag) return;
+  tx = drag.tx + (e.clientX-drag.x);
+  ty = drag.ty + (e.clientY-drag.y);
+  applyTransform();
+});
+stage.addEventListener('pointerup', ()=>{drag=null;stage.classList.remove('dragging');});
+document.getElementById('expandAll').onclick = expandAll;
+document.getElementById('collapseDetail').onclick = collapseDetail;
+document.getElementById('fit').onclick = fit;
+document.getElementById('zoomIn').onclick = ()=>zoom(1.18, stage.clientWidth/2, stage.clientHeight/2);
+document.getElementById('zoomOut').onclick = ()=>zoom(.85, stage.clientWidth/2, stage.clientHeight/2);
+document.getElementById('print').onclick = ()=>window.print();
+
+const search = document.getElementById('search');
+search.addEventListener('input', ()=>{
+  const q = search.value.trim();
+  document.querySelectorAll('.node').forEach(el=>el.classList.remove('hit','dim'));
+  if(!q){ return; }
+  let first = null;
+  byId.forEach(n=>{
+    const hit = (n.title+n.note+n.tag+n.page).includes(q);
+    const el = document.querySelector(`.node[data-id="${n._id}"]`);
+    if(el){ el.classList.toggle('hit', hit); el.classList.toggle('dim', !hit); }
+    if(hit && !first) first = n;
+  });
+  if(first){
+    const el = document.querySelector(`.node[data-id="${first._id}"]`);
+    if(el) el.scrollIntoView({block:'center', inline:'center', behavior:'smooth'});
+  }
+});
+
+function saveState(){
+  if(document.body.classList.contains('export')) return;
+  try{ localStorage.setItem('fazhishi-map-collapsed', JSON.stringify([...collapsed])); }catch(e){}
+}
+
+const params = new URLSearchParams(location.search);
+if(params.get('export')==='1'){
+  document.body.classList.add('export');
+  collapsed.clear();
+  const maxDepth = parseInt(params.get('depth')||'99',10);
+  if(maxDepth < 99){
+    byId.forEach(n=>{ if(n._depth>=maxDepth && n.children.length) collapsed.add(n._id); });
+  }
+  render();
+  const w = parseFloat(world.style.width), h = parseFloat(world.style.height);
+  world.style.transform='none';
+  world.style.position='relative';
+  stage.style.width = (w+60)+'px';
+  stage.style.height = (h+60)+'px';
+  world.style.left='30px'; world.style.top='30px'; world.style.position='absolute';
+  window.__mapSize = {width:w+60, height:h+60};
+} else {
+  try{
+    const saved = JSON.parse(localStorage.getItem('fazhishi-map-collapsed')||'[]');
+    collapsed = new Set(saved);
+  }catch(e){}
+  if(!collapsed.size){
+    byId.forEach(n=>{ if(n._depth>=1 && n.children.length) collapsed.add(n._id); });
+  }
+  render();
+  fit();
+}
+window.addEventListener('resize', ()=>{ if(!document.body.classList.contains('export')) fit(); });
+</script>
+</body>
+</html>
+'''
+
+html = html.replace('__DATA__', json.dumps(DATA, ensure_ascii=False))
+html = html.replace('__TAG_COLORS__', json.dumps(TAG_COLORS, ensure_ascii=False))
+html = html.replace('__CHAPTER_COLORS__', json.dumps(CHAPTER_COLORS, ensure_ascii=False))
+with open(os.path.join(OUT, "中国近代法制-思维导图.html"), "w", encoding="utf-8") as f:
+    f.write(html)
+with open(os.path.join(ROOT, "app", "mindmap", "index.html"), "w", encoding="utf-8") as f:
+    f.write(html)
+
+# 统计
+def count(n):
+    return 1 + sum(count(c) for c in n["children"])
+print("nodes", count(DATA), "html", os.path.getsize(os.path.join(OUT, "中国近代法制-思维导图.html")))
