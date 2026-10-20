@@ -147,13 +147,12 @@ CHAPTER_COLORS = ["#2f6d5f", "#8a5a9e", "#b4534b", "#a5763f", "#4b6b9c"]
 def walk(node, depth=0, chapter=0):
     node["_depth"] = depth
     if depth == 1:
-        chapter = node["_chapter"] = (chapter + 1)
+        node["_chapter"] = chapter
         node["_color"] = CHAPTER_COLORS[(chapter - 1) % len(CHAPTER_COLORS)]
     elif depth > 1:
         node["_chapter"] = chapter
-        node["_color"] = node.get("_color") or None
-    for c in node["children"]:
-        walk(c, depth + 1, chapter)
+    for i, c in enumerate(node["children"], 1):
+        walk(c, depth + 1, i if depth == 0 else chapter)
 
 
 walk(DATA)
