@@ -37,6 +37,33 @@ def answer_text(rec):
     return "\n".join(p["raw"] for p in rec["pages"])
 
 
+def trim_next_answer(expl: str, qnum: int) -> str:
+    """截掉解析尾部误粘进来的下一题答案块。"""
+    pat = re.compile(
+        r"(?m)(?:^|[\n。；])\s*[•·●\-—.．、]?\s*[iIl]?\s*(\d{1,3})\s*[.．、]?\s*(?:\d\s*)?[【\[]?\s*(?:答案|解析|详解)"
+    )
+    for m in pat.finditer(expl):
+        try:
+            n = int(m.group(1))
+        except ValueError:
+            continue
+        if n > qnum:
+            return expl[:m.start()].strip()
+    return expl
+
+
+MANUAL_ANSWER_FIX = {
+    "2024-法学-综合课-10": "C",  # 解析明确 C 项正确，题库答案键误作 D
+}
+
+MANUAL_EXPL_FIX = {
+    "2010-法学-综合课-4": [("权，国民是制宪权的主体。故选A。", "")],
+    "2012-非法学-综合课-12": [("故选C。", "故选B。")],
+    "2025-法学-综合课-10": [("正确答案是 B", "正确答案是 D"), ("正确答案是B", "正确答案是D")],
+    "2025-非法学-综合课-16": [("正确答案是 B", "正确答案是 D"), ("正确答案是B", "正确答案是D")],
+}
+
+
 def clean_text(t: str) -> str:
     t = re.sub(r"历\s*年\s*法\s*硕\s*真\s*题\s*解\s*析.*", "", t)
     t = re.sub(r"[ \t]+", "", t)
@@ -70,12 +97,15 @@ ANSWER_OVERRIDES = {
 def merge(rec_true, rec_ans):
     qs = parser.parse_true_pages(true_pages(rec_true))
     qnums = sorted(q.number for q in qs)
-    ans = parser.align_blocks(parser.parse_answers(answer_text(rec_ans)), qnums) if rec_ans else {}
+    qtexts = {}
+    for q in qs:
+        qtexts[q.number] = q.stem + " " + " ".join(q.options.values())
+    ans = parser.align_blocks(parser.parse_answers(answer_text(rec_ans)), qnums, qtexts) if rec_ans else {}
     out = []
     for q in qs:
         a = ans.get(q.number, {})
         answer = (a.get("answer") or "").strip()
-        expl = (a.get("explanation") or "").strip()
+        expl = trim_next_answer((a.get("explanation") or "").strip(), q.number)
         stem = clean_text(q.stem)
         options = {k: clean_text(v) for k, v in q.options.items()}
         if q.qtype in ("single", "multiple") and sum(1 for v in q.options.values() if v) == 0:
@@ -98,6 +128,10 @@ def merge(rec_true, rec_ans):
                 m = re.search(r"(?:答案选|故选|答案为|应选)\s*([A-D]{1,4})", expl)
                 if m:
                     answer = m.group(1)
+            qid = f"{rec_true['year']}-{rec_true['degree']}-{rec_true['paper']}-{q.number}"
+            answer = MANUAL_ANSWER_FIX.get(qid, answer)
+            for old, new in MANUAL_EXPL_FIX.get(qid, []):
+                expl = expl.replace(old, new)
         out.append({
             "id": f"{rec_true['year']}-{rec_true['degree']}-{rec_true['paper']}-{q.number}",
             "year": rec_true["year"],

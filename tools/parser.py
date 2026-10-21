@@ -359,7 +359,7 @@ def fix_num(s: str):
     return None
 
 ANS_RE = re.compile(
-    r"(?m)^\s*(?:(\d{1,3})\s*[.．、]\s*)?"
+    r"(?m)^\s*(?:(\d{1,3})\s*[.．、]?\s*)?"
     r"[【\[［(（]?\s*(答案要点|答案)\s*[】\]］)）]?\s*[:：]?\s*"
 )
 DETAIL_RE = re.compile(r"(?m)^\s*(?:(\d{1,3})\s*[.．、]\s*)?[【\[［(（]?\s*(详解)\s*[】\]］)）]?\s*[:：]?\s*")
@@ -408,35 +408,65 @@ def extract_answer_blocks(text: str) -> list[dict]:
     return blocks
 
 
-def align_blocks(blocks: list[dict], qnums: list[int]) -> dict[int, dict]:
+def _assign_block(out: dict, target: int, b: dict):
+    ans, expl = split_answer(b["raw"])
+    if target in out:
+        if ans and not out[target]["answer"]:
+            out[target]["answer"] = ans
+        out[target]["explanation"] = (out[target]["explanation"] + "\n" + clean_explanation(expl)).strip()
+    else:
+        out[target] = {"answer": ans, "explanation": clean_explanation(expl)}
+
+
+def _bigrams(t: str) -> set:
+    t = re.sub(r"\s+", "", t or "")
+    return {t[i:i + 2] for i in range(len(t) - 1)}
+
+
+def align_blocks(blocks: list[dict], qnums: list[int], qtexts: dict | None = None) -> dict[int, dict]:
+    """先按答案块题号精确匹配，再用内容相似度补缺失题。
+
+    解析中常混入“选C。……”这类无题号续段。旧逻辑按顺序推进，会被
+    续段带偏，导致后面整卷答案错位一题。精确题号优先可避免这种串位。
+    """
+    out: dict[int, dict] = {}
     qset = set(qnums)
-    used = set()
-    out = {}
-    ptr = 0
+    by_num: dict[int, list[dict]] = {}
     for b in blocks:
-        n = b.get("num")
-        target = None
-        if n in qset and n not in used and n >= (qnums[ptr] if ptr < len(qnums) else 0):
-            target = n
-        else:
-            while ptr < len(qnums) and qnums[ptr] in used:
-                ptr += 1
-            if ptr < len(qnums):
-                target = qnums[ptr]
-        if target is None:
+        if b.get("num") is not None:
+            by_num.setdefault(b["num"], []).append(b)
+
+    qtexts = qtexts or {}
+    used = set()
+    # 1) 题号精确匹配（同题多个块则合并）
+    for q in qnums:
+        for b in by_num.get(q, []):
+            _assign_block(out, q, b)
+            used.add(id(b))
+
+    # 2) 没有精确题号的题，按内容相似度在邻近未用块中补
+    unused = [b for b in blocks if id(b) not in used]
+    for qi, q in enumerate(qnums):
+        if q in out:
             continue
-        ans, expl = split_answer(b["raw"])
-        if target in out:
-            # 合并同题的多个答案块
-            if ans and not out[target]["answer"]:
-                out[target]["answer"] = ans
-            out[target]["explanation"] = (out[target]["explanation"] + "\n" + clean_explanation(expl)).strip()
-        else:
-            out[target] = {"answer": ans, "explanation": clean_explanation(expl)}
-        used.add(target)
-        while ptr < len(qnums) and qnums[ptr] in used:
-            ptr += 1
+        qtext = qtexts.get(q, "")
+        # q_texts 由调用方可选注入；没有时用题号附近块兜底
+        cands = [b for b in unused if b.get("num") is None or b["num"] not in qset]
+        if not cands:
+            continue
+        if qtext:
+            qg = _bigrams(qtext)
+            scored = []
+            for b in cands:
+                bg = _bigrams(b["raw"])
+                scored.append((len(qg & bg) / max(1, len(qg)), b))
+            scored.sort(key=lambda x: x[0], reverse=True)
+            if scored and scored[0][0] >= 0.08:
+                _assign_block(out, q, scored[0][1])
+                used.add(id(scored[0][1]))
+                unused = [b for b in unused if id(b) not in used]
     return out
+
 
 
 def parse_answers(text: str) -> list[dict]:
@@ -445,7 +475,7 @@ def parse_answers(text: str) -> list[dict]:
 
 def split_answer(raw: str) -> tuple[str, str]:
     s = raw.strip()
-    s = re.sub(r"^[\s:：]+", "", s)
+    s = re.sub(r"^[\s:：.．、]+", "", s)
     m = re.match(r"^([A-D]{1,4})(?![A-Za-z\u4e00-\u9fff])", s)
     if m:
         return m.group(1), s[m.end():].strip()
